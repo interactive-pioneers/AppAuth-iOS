@@ -31,9 +31,9 @@ NS_ASSUME_NONNULL_BEGIN
         receives a @c OIDExternalUserAgentSession.cancel message, or after processing a
         @c OIDExternalUserAgentSession.resumeExternalUserAgentFlowWithURL: message.
  */
-+ (id<OIDExternalUserAgentSession, OIDAuthorizationFlowSession>)
-    presentAuthorizationRequest:(OIDAuthorizationRequest *)request
-                       callback:(OIDAuthorizationCallback)callback;
++ (id<OIDExternalUserAgentSession>)presentAuthorizationRequest:(OIDAuthorizationRequest *)request
+                                                      callback:(OIDAuthorizationCallback)callback;
+
 @end
 
 NS_ASSUME_NONNULL_END

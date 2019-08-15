@@ -21,6 +21,11 @@
 #import "Source/OIDError.h"
 #import "Source/OIDServiceDiscovery.h"
 
+// Ignore warnings about "Use of GNU statement expression extension" which is raised by our use of
+// the XCTAssert___ macros.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu"
+
 /*! Testing URL used when testing URL conversions. */
 static NSString *const kTestURL = @"http://www.google.com/";
 
@@ -34,6 +39,7 @@ static NSString *const kTokenEndpointKey = @"token_endpoint";
 static NSString *const kUserinfoEndpointKey = @"userinfo_endpoint";
 static NSString *const kJWKSURLKey = @"jwks_uri";
 static NSString *const kRegistrationEndpointKey = @"registration_endpoint";
+static NSString *const kEndSessionEndpointKey = @"end_session_endpoint";
 static NSString *const kScopesSupportedKey = @"scopes_supported";
 static NSString *const kResponseTypesSupportedKey = @"response_types_supported";
 static NSString *const kResponseModesSupportedKey = @"response_modes_supported";
@@ -97,6 +103,7 @@ static NSString *const kOPTosURIKey = @"op_tos_uri";
     kUserinfoEndpointKey : @"User Info Endpoint",
     kJWKSURLKey : @"http://www.example.com/jwks",
     kRegistrationEndpointKey : @"Registration Endpoint",
+    kEndSessionEndpointKey : @"https://www.example.com/logout",
     kScopesSupportedKey : @"Scopes Supported",
     kResponseTypesSupportedKey : @"Response Types Supported",
     kResponseModesSupportedKey : @"Response Modes Supported",
@@ -183,6 +190,10 @@ static NSString *const kDiscoveryDocumentNullField =
       "ail_verified\",\"exp\",\"family_name\",\"given_name\",\"iat\",\"iss\",\"locale\",\"name\",\""
       "picture\",\"sub\"]}";
 
+static NSString *const kDiscoveryDocumentNotDictionary =
+    @"[\"code\",\"token\",\"id_token\",\"code token\",\"code id_token\",\"token id_token\",\"code to"
+    "ken id_token\",\"none\"]";
+
 /*! @brief Tests that URLs are handled properly when converted from the dictionary's string
         representation.
  */
@@ -202,7 +213,7 @@ static NSString *const kDiscoveryDocumentNullField =
 
   NSURL *testPolicyURL = [NSURL URLWithString:kTestURL];
 
-  XCTAssertEqualObjects(discovery.OPPolicyURI, testPolicyURL);
+  XCTAssertEqualObjects(discovery.OPPolicyURI, testPolicyURL, @"");
 }
 
 /*! @brief Tests that we get an error when the document is not valid JSON.
@@ -213,8 +224,20 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertNil(discovery, @"When initializing a discovery document, it should not return an "
                           "instance if it is not valid JSON.");
   XCTAssertNotNil(error, @"There should be an error indicating we received bad JSON.");
-  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain);
-  XCTAssertEqual(error.code, OIDErrorCodeJSONDeserializationError);
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeJSONDeserializationError, @"");
+}
+
+/*! @brief Tests that we get an error when the root JSON object isn't a dictionary.
+ */
+- (void)testErrorWhenRootObjectNotNSDictionary {
+  NSError *error;
+  OIDServiceDiscovery *discovery = [[OIDServiceDiscovery alloc] initWithJSON:kDiscoveryDocumentNotDictionary error:&error];
+  XCTAssertNil(discovery, @"When initializing a discovery document, it should not return an "
+               "instance if the root JSON object is not a NSDictionary.");
+  XCTAssertNotNil(error, @"There should be an error indicating we received bad JSON.");
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument, @"");
 }
 
 /*! @brief Tests that we get an error when the required fields aren't in the source dictionary.
@@ -226,8 +249,8 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertNil(discovery, @"When initializing a discovery document, it should not return an "
                           "instance if there are missing required fields.");
   XCTAssertNotNil(error, @"There should be an error indicating we are missing required fields.");
-  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain);
-  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument);
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument, @"");
 }
 
 /*! @brief Tests that we get an error when the required fields aren't in the source dictionary.
@@ -239,8 +262,8 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertNil(discovery, @"When initializing a discovery document with JSON, it should not return"
                           " an instance if there are missing required fields.");
   XCTAssertNotNil(error, @"There should be an error indicating we are missing required fields.");
-  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain);
-  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument);
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument, @"");
 }
 
 /*! @brief Tests that we do not get an error, and we do get an instance of
@@ -276,8 +299,8 @@ static NSString *const kDiscoveryDocumentNullField =
                @"When initializing a discovery document, it should not return an  instance if there"
                    " are missing required fields.");
   XCTAssertNotNil(error, @"There should be an error indicating we are missing required fields.");
-  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain);
-  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument);
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument, @"");
 }
 
 /*! @brief Tests that we get an error when null is passed in through JSON.
@@ -290,8 +313,8 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertNil(discovery, @"When initializing a discovery document, it should not return an "
                           "instance if there are missing required fields.");
   XCTAssertNotNil(error, @"There should be an error indicating we are missing required fields.");
-  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain);
-  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument);
+  XCTAssertEqualObjects(error.domain, OIDGeneralErrorDomain, @"");
+  XCTAssertEqual(error.code, OIDErrorCodeInvalidDiscoveryDocument, @"");
 }
 
 /*! @brief Tests that the JSON String version results in a valid object.
@@ -304,7 +327,7 @@ static NSString *const kDiscoveryDocumentNullField =
                               "valid object");
   XCTAssertNil(error, @"There should not be any errors.");
   XCTAssertEqualObjects(discovery.authorizationEndpoint,
-                        [[self class] googleDiscoveryAuthorizationEndpoint]);
+                        [[self class] googleDiscoveryAuthorizationEndpoint], @"");
 }
 
 /*! @brief Tests that the JSON NSData version results in a valid object.
@@ -318,7 +341,7 @@ static NSString *const kDiscoveryDocumentNullField =
                               "valid object");
   XCTAssertNil(error, @"There should not be any errors.");
   XCTAssertEqualObjects(discovery.authorizationEndpoint,
-                        [[self class] googleDiscoveryAuthorizationEndpoint]);
+                        [[self class] googleDiscoveryAuthorizationEndpoint], @"");
 }
 
 /*! @brief Tests that initialising with the dictionary initialiser and the JSON initialiser result
@@ -344,8 +367,8 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertNotNil(discovery2, @"Discovery document should initialize.");
   XCTAssertNil(error, @"There should not be any errors.");
 
-  XCTAssertEqualObjects(discovery.discoveryDictionary, discovery2.discoveryDictionary);
-  XCTAssertEqualObjects(discovery, discovery2);
+  XCTAssertEqualObjects(discovery.discoveryDictionary, discovery2.discoveryDictionary, @"");
+  XCTAssertEqualObjects(discovery, discovery2, @"");
 }
 
 
@@ -374,7 +397,7 @@ static NSString *const kDiscoveryDocumentNullField =
   NSData *data = [NSKeyedArchiver archivedDataWithRootObject:discovery];
   OIDServiceDiscovery *unarchived = [NSKeyedUnarchiver unarchiveObjectWithData:data];
 
-  XCTAssertEqualObjects(discovery.discoveryDictionary, unarchived.discoveryDictionary);
+  XCTAssertEqualObjects(discovery.discoveryDictionary, unarchived.discoveryDictionary, @"");
 }
 
 /*! @brief Tests the NSCopying implementation by round-tripping an instance through the copying
@@ -390,7 +413,7 @@ static NSString *const kDiscoveryDocumentNullField =
 
   OIDServiceDiscovery *unarchived = [discovery copy];
 
-  XCTAssertEqualObjects(discovery.discoveryDictionary, unarchived.discoveryDictionary);
+  XCTAssertEqualObjects(discovery.discoveryDictionary, unarchived.discoveryDictionary, @"");
 }
 
 #pragma mark - Field Mappings
@@ -460,62 +483,65 @@ static NSString *const kDiscoveryDocumentNullField =
   XCTAssertEqualObjects(discovery._field_, [NSURL URLWithString:_test_value_]);                    \
 }
 
-TestURLFieldBackedBy(issuer, kIssuerKey, kTestURL);
-TestURLFieldBackedBy(authorizationEndpoint, kAuthorizationEndpointKey, kTestURL);
-TestURLFieldBackedBy(tokenEndpoint, kTokenEndpointKey, kTestURL);
-TestURLFieldBackedBy(userinfoEndpoint, kUserinfoEndpointKey, kTestURL);
-TestURLFieldBackedBy(jwksURL, kJWKSURLKey, kTestURL);
-TestURLFieldBackedBy(registrationEndpoint, kRegistrationEndpointKey, kTestURL);
-TestFieldBackedBy(scopesSupported, kScopesSupportedKey, @"Scopes Supported");
-TestFieldBackedBy(responseTypesSupported, kResponseTypesSupportedKey, @"Response Types Supported");
-TestFieldBackedBy(responseModesSupported, kResponseModesSupportedKey, @"Response Modes Supported");
-TestFieldBackedBy(grantTypesSupported, kGrantTypesSupportedKey, @"Grant Types Supported");
-TestFieldBackedBy(acrValuesSupported, kACRValuesSupportedKey, @"ACR Values Supported");
-TestFieldBackedBy(subjectTypesSupported, kSubjectTypesSupportedKey, @"Subject Types Supported");
+TestURLFieldBackedBy(issuer, kIssuerKey, kTestURL)
+TestURLFieldBackedBy(authorizationEndpoint, kAuthorizationEndpointKey, kTestURL)
+TestURLFieldBackedBy(tokenEndpoint, kTokenEndpointKey, kTestURL)
+TestURLFieldBackedBy(userinfoEndpoint, kUserinfoEndpointKey, kTestURL)
+TestURLFieldBackedBy(jwksURL, kJWKSURLKey, kTestURL)
+TestURLFieldBackedBy(registrationEndpoint, kRegistrationEndpointKey, kTestURL)
+TestURLFieldBackedBy(endSessionEndpoint, kEndSessionEndpointKey, kTestURL)
+TestFieldBackedBy(scopesSupported, kScopesSupportedKey, @"Scopes Supported")
+TestFieldBackedBy(responseTypesSupported, kResponseTypesSupportedKey, @"Response Types Supported")
+TestFieldBackedBy(responseModesSupported, kResponseModesSupportedKey, @"Response Modes Supported")
+TestFieldBackedBy(grantTypesSupported, kGrantTypesSupportedKey, @"Grant Types Supported")
+TestFieldBackedBy(acrValuesSupported, kACRValuesSupportedKey, @"ACR Values Supported")
+TestFieldBackedBy(subjectTypesSupported, kSubjectTypesSupportedKey, @"Subject Types Supported")
 TestFieldBackedBy(IDTokenSigningAlgorithmValuesSupported,
                   kIDTokenSigningAlgorithmValuesSupportedKey,
-                  @"Token Signing Algorithm Values Supported");
+                  @"Token Signing Algorithm Values Supported")
 TestFieldBackedBy(IDTokenEncryptionAlgorithmValuesSupported,
                   kIDTokenEncryptionAlgorithmValuesSupportedKey,
-                  @"Token Encryption Algorithm Values Supported");
+                  @"Token Encryption Algorithm Values Supported")
 TestFieldBackedBy(IDTokenEncryptionEncodingValuesSupported,
                   kIDTokenEncryptionEncodingValuesSupportedKey,
-                  @"token Encryption Encoding Values Supported");
+                  @"token Encryption Encoding Values Supported")
 TestFieldBackedBy(userinfoSigningAlgorithmValuesSupported,
                   kUserinfoSigningAlgorithmValuesSupportedKey,
-                  @"User Info Signing Algorithm Values Supported");
+                  @"User Info Signing Algorithm Values Supported")
 TestFieldBackedBy(userinfoEncryptionAlgorithmValuesSupported,
                   kUserinfoEncryptionAlgorithmValuesSupportedKey,
-                  @"User Info Encryption Algorithm Values Supported");
+                  @"User Info Encryption Algorithm Values Supported")
 TestFieldBackedBy(userinfoEncryptionEncodingValuesSupported,
                   kUserinfoEncryptionEncodingValuesSupportedKey,
-                  @"User Info Encryption Encoding Values Supported");
+                  @"User Info Encryption Encoding Values Supported")
 TestFieldBackedBy(requestObjectSigningAlgorithmValuesSupported,
                   kRequestObjectSigningAlgorithmValuesSupportedKey,
-                  @"Request Object Signing Algorithm Values Supported");
+                  @"Request Object Signing Algorithm Values Supported")
 TestFieldBackedBy(requestObjectEncryptionAlgorithmValuesSupported,
                   kRequestObjectEncryptionAlgorithmValuesSupportedKey,
-                  @"Reqest Object Encryption Algorithm Values Supported");
+                  @"Reqest Object Encryption Algorithm Values Supported")
 TestFieldBackedBy(requestObjectEncryptionEncodingValuesSupported,
                   kRequestObjectEncryptionEncodingValuesSupported,
-                  @"Request Object Encryption Encoding Values Supported");
+                  @"Request Object Encryption Encoding Values Supported")
 TestFieldBackedBy(tokenEndpointAuthMethodsSupported,
                   kTokenEndpointAuthMethodsSupportedKey,
-                  @"Token Endpoint Auth Methods Supported");
+                  @"Token Endpoint Auth Methods Supported")
 TestFieldBackedBy(tokenEndpointAuthSigningAlgorithmValuesSupported,
                   kTokenEndpointAuthSigningAlgorithmValuesSupportedKey,
-                  @"Token Endpoint Auth Signing Algorithm Values Supported");
-TestFieldBackedBy(displayValuesSupported, kDisplayValuesSupportedKey, @"Display Values Supported");
-TestFieldBackedBy(claimTypesSupported, kClaimTypesSupportedKey, @"Claim Types Supported");
-TestFieldBackedBy(claimsSupported, kClaimsSupportedKey, @"Claims Supported");
-TestURLFieldBackedBy(serviceDocumentation, kServiceDocumentationKey, kTestURL);
-TestFieldBackedBy(claimsLocalesSupported, kClaimsLocalesSupportedKey, @"Claims Locales Supported");
-TestFieldBackedBy(UILocalesSupported, kUILocalesSupportedKey, @"UI Locales Supported");
-TestBooleanFieldBackedBy(claimsParameterSupported, kClaimsParameterSupportedKey, YES);
-TestBooleanFieldBackedBy(requestParameterSupported, kRequestParameterSupportedKey, YES);
-TestBooleanFieldBackedBy(requestURIParameterSupported, kRequestURIParameterSupportedKey, NO);
-TestBooleanFieldBackedBy(requireRequestURIRegistration, kRequireRequestURIRegistrationKey, YES);
-TestURLFieldBackedBy(OPPolicyURI, kOPPolicyURIKey, kTestURL);
-TestURLFieldBackedBy(OPTosURI, kOPTosURIKey, kTestURL);
+                  @"Token Endpoint Auth Signing Algorithm Values Supported")
+TestFieldBackedBy(displayValuesSupported, kDisplayValuesSupportedKey, @"Display Values Supported")
+TestFieldBackedBy(claimTypesSupported, kClaimTypesSupportedKey, @"Claim Types Supported")
+TestFieldBackedBy(claimsSupported, kClaimsSupportedKey, @"Claims Supported")
+TestURLFieldBackedBy(serviceDocumentation, kServiceDocumentationKey, kTestURL)
+TestFieldBackedBy(claimsLocalesSupported, kClaimsLocalesSupportedKey, @"Claims Locales Supported")
+TestFieldBackedBy(UILocalesSupported, kUILocalesSupportedKey, @"UI Locales Supported")
+TestBooleanFieldBackedBy(claimsParameterSupported, kClaimsParameterSupportedKey, YES)
+TestBooleanFieldBackedBy(requestParameterSupported, kRequestParameterSupportedKey, YES)
+TestBooleanFieldBackedBy(requestURIParameterSupported, kRequestURIParameterSupportedKey, NO)
+TestBooleanFieldBackedBy(requireRequestURIRegistration, kRequireRequestURIRegistrationKey, YES)
+TestURLFieldBackedBy(OPPolicyURI, kOPPolicyURIKey, kTestURL)
+TestURLFieldBackedBy(OPTosURI, kOPTosURIKey, kTestURL)
 
 @end
+
+#pragma GCC diagnostic pop

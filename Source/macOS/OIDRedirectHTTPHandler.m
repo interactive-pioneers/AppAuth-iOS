@@ -18,7 +18,6 @@
 
 #import "OIDRedirectHTTPHandler.h"
 
-#import "OIDAuthorizationFlowSession.h"
 #import "OIDAuthorizationService.h"
 #import "OIDErrorUtilities.h"
 #import "OIDExternalUserAgentSession.h"
@@ -33,7 +32,7 @@ static NSString *const kHTMLAuthorizationComplete =
 /*! @brief Error warning that the @c currentAuthorizationFlow is not set on this object (likely a
         developer error, unless the user stumbled upon the loopback server before the authorization
         had started completely).
-    @description An object conforming to @c OIDAuthorizationFlowSession is returned when the 
+    @description An object conforming to @c OIDExternalUserAgentSession is returned when the
         authorization is presented with
         @c OIDAuthorizationService::presentAuthorizationRequest:callback:. It should be set to
         @c currentAuthorization when using a loopback redirect.
@@ -48,9 +47,10 @@ static NSString *const kHTMLErrorMissingCurrentAuthorizationFlow =
 static NSString *const kHTMLErrorRedirectNotValid =
     @"<html><body>AppAuth Error: Not a valid redirect.</body></html>";
 
-@implementation OIDRedirectHTTPHandler
-
-@synthesize currentAuthorizationFlow = _currentAuthorizationFlow;
+@implementation OIDRedirectHTTPHandler {
+  HTTPServer *_httpServ;
+  NSURL *_successURL;
+}
 
 - (instancetype)init {
   return [self initWithSuccessURL:nil];
@@ -64,13 +64,14 @@ static NSString *const kHTMLErrorRedirectNotValid =
   return self;
 }
 
-- (NSURL *)startHTTPListener:(NSError **)returnError {
+- (NSURL *)startHTTPListener:(NSError **)returnError withPort:(uint16_t)port {
   // Cancels any pending requests.
   [self cancelHTTPListener];
 
   // Starts a HTTP server on the loopback interface.
   // By not specifying a port, a random available one will be assigned.
   _httpServ = [[HTTPServer alloc] init];
+  [_httpServ setPort:port];
   [_httpServ setDelegate:self];
   NSError *error = nil;
   if (![_httpServ start:&error]) {
@@ -89,6 +90,11 @@ static NSString *const kHTMLErrorRedirectNotValid =
   }
 
   return nil;
+}
+
+- (NSURL *)startHTTPListener:(NSError **)returnError {
+  // A port of 0 requests a random available port
+  return [self startHTTPListener:returnError withPort:0];
 }
 
 - (void)cancelHTTPListener {
