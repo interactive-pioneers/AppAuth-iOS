@@ -31,13 +31,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 /*! @brief The convenience initializer for devices with iOS 11+
  */
-- (nullable instancetype)init API_AVAILABLE(ios(11));
+- (instancetype)init API_AVAILABLE(ios(11));
 
 /*! @brief The designated initializer.
     @param presentingViewController The view controller from which to present the
         \SFSafariViewController.
  */
-- (nullable instancetype)initWithPresentingViewController:
+- (instancetype)initWithPresentingViewController:
     (nullable UIViewController *)presentingViewController
     NS_DESIGNATED_INITIALIZER;
 
